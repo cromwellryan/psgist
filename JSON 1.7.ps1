@@ -424,9 +424,9 @@ Function ConvertFrom-Xml {
       [Switch]$ForceType
    )
    PROCESS{ 
-      if(Get-Member -InputObject $xml -Name root) {
+      if($xml.Item("root") -ne $null) {
          return $xml.root.Objects | ConvertFrom-Xml
-      } elseif(Get-Member -InputObject $xml -Name Objects) {
+      } elseif($xml.Item("Objects") -ne $null) {
          return $xml.Objects | ConvertFrom-Xml
       }
       $propbag = @{}
@@ -443,7 +443,13 @@ Function ConvertFrom-Xml {
             $output.PsTypeNames.Insert(0, $xml.__type)
          }
       } else {
+				if( $propbag.Count -eq 0) { 
+         $output = New-Object PSObject 
+				}
+				else { 
          $output = New-Object PSObject -Property $propbag
+				}
+				
          if($Type) {
             $output.PsTypeNames.Insert(0, $Type)
          }
