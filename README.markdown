@@ -5,7 +5,7 @@ Provides the `gist` Powershell function to post code to http://gist.github.com.
 
 Usage
 --------------------
-	`gist [[-File] <FileInfo>] [[-Description] <String>] [[-Username] <String>]` 
+	gist [[-File] <FileInfo>] [[-Description] <String>] [[-Username] <String>]
 
 Example:
 
