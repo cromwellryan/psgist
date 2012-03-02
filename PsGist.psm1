@@ -5,7 +5,7 @@ function Get-Github-Credential($username) {
 }
 
 
-function Create-Gist { 
+function New-Gist { 
 <# 
 	.Synopsis
 	Publishes Github Gists.
@@ -45,10 +45,15 @@ function Create-Gist {
 		$files = @{}
 	}
 	PROCESS {
-		if( $InputObject -ne $null -and $InputObject.GetType() -eq [System.IO.FileInfo] ) {
-			$fileinfo = [System.IO.FileInfo]$InputObject
+		if( $InputObject -ne $null ) {
+			if( $InputObject.GetType() -eq [System.IO.FileInfo] ) {
+				$fileinfo = [System.IO.FileInfo]$InputObject
+			} 
+			else { # Ignore Directories
+				return 
+			}
 		}
-		elseif( Test-Path $File ){
+		elseif( $File -ne $null -and (Test-Path $File) ){
 			$fileinfo = Get-Item $File
 		}
 		else {
@@ -139,7 +144,7 @@ function Create-Gist {
 			return
 		}
 
-		$result = convertfrom-json $content -Type PSObject -ForceType
+		$result = convertfrom-json $content -Type PSObject
 
 		$url = $result.html_url
 	
@@ -147,6 +152,7 @@ function Create-Gist {
 	}
 }
 
-new-alias gist Create-Gist
+new-alias gist New-Gist
+new-alias Create-Gist New-Gist # For those who saw my post when I used create... to be deprecated
 
-export-modulemember -alias gist -function Create-Gist
+export-modulemember -alias * -function New-Gist
