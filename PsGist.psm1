@@ -1,7 +1,7 @@
 . (join-path $PSScriptRoot "/json 1.7.ps1")
 
-function Get-Github-Credential() {
-	$host.ui.PromptForCredential("Github Credential", "Please enter your Github user name and password.", "", "")
+function Get-Github-Credential($username) {
+	$host.ui.PromptForCredential("Github Credential", "Please enter your Github user name and password.", $username, "")
 }
 
 
@@ -22,8 +22,8 @@ function Create-Gist {
 	.Parameter Description 
 	(optional) The Description of this Gist.
 
-	.Parameter Credential
-	(optional) The Github credential which will own this Gist.
+	.Parameter Username
+	The Github username which will own this Gist.
 
 	.Example
 	gist -File "Hello.js" -Description "Hello.js greets all visitors"
@@ -38,7 +38,7 @@ function Create-Gist {
 		[PSObject]$InputObject = $null,
 		[string]$File = $null,
 		[string]$Description = "",
-		[Management.Automation.PSCredential]$Credential = $(Get-Github-Credential)
+		[string]$Username = $null
 	)
 	BEGIN {
 		$files = @{}
@@ -75,16 +75,21 @@ function Create-Gist {
 
 		$request = [Net.WebRequest]::Create($apiurl)
 
-		if( $Credential -ne $null ) {
-			$username = $Credential.Username.Substring(1)
-			$password = $Credential.Password
-
-			$bstrpassword= [Runtime.InteropServices.Marshal]::SecureStringToBSTR($password)
-			$insecurepassword = [Runtime.InteropServices.Marshal]::PtrToStringAuto($bstrpassword)
-
-			$basiccredential = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes([String]::Format("{0}:{1}", $username, $insecurepassword)))
-			$request.Headers.Add("Authorization", "Basic " + $basiccredential)
+		$credential = $(Get-Github-Credential $Username)
+	
+		if($credential -eq $null) {
+			write-host "Github credentials are required."
+			return
 		}
+
+		$username = $credential.Username.Substring(1)
+		$password = $credential.Password
+
+		$bstrpassword= [Runtime.InteropServices.Marshal]::SecureStringToBSTR($password)
+		$insecurepassword = [Runtime.InteropServices.Marshal]::PtrToStringAuto($bstrpassword)
+
+		$basiccredential = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes([String]::Format("{0}:{1}", $username, $insecurepassword)))
+		$request.Headers.Add("Authorization", "Basic " + $basiccredential)
 
 		$request.ContentType = "application/json"
 		$request.Method = "POST"
@@ -111,9 +116,14 @@ function Create-Gist {
 		$stream = [io.stream]$request.GetRequestStream()
 		$stream.Write($bytes,0,$bytes.Length)
 
-		$response = $request.GetResponse()
-
+		try {
+			$response = $request.GetResponse()
+		}
+		catch  [System.Net.WebException] {
+			$_.Exception.Message | write-error 
 			
+			return
+		}
 		
 		$responseStream = $response.GetResponseStream()
 		$reader = New-Object system.io.streamreader -ArgumentList $responseStream
@@ -122,6 +132,8 @@ function Create-Gist {
 
 		if( $response.StatusCode -ne [Net.HttpStatusCode]::Created ) {
 			$content | write-error
+
+			return
 		}
 
 		$result = convertfrom-json $content -Type PSObject -ForceType
