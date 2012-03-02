@@ -25,12 +25,15 @@ function New-Gist {
 	.Parameter Username
 	The Github username which will own this Gist.
 
+	.Parameter Public
+	When specified, the Gist will be made public.  Default is private.
+
 	.Example
 	gist -File "Hello.js" -Description "Hello.js greets all visitors"
 	Publishing a public Gist
 
 	.Example
-	gist -File "Hello.js" -Description "Hello.js greets all visitors" -Private
+	gist -File "Hello.js" -Description "Hello.js greets all visitors" -Public
 	Publishing a private Gist
 #>
 	Param(
