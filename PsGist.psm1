@@ -38,7 +38,8 @@ function Create-Gist {
 		[PSObject]$InputObject = $null,
 		[string]$File = $null,
 		[string]$Description = "",
-		[string]$Username = $null
+		[string]$Username = $null,
+		[switch]$Public = $false
 	)
 	BEGIN {
 		$files = @{}
@@ -103,10 +104,12 @@ function Create-Gist {
 		}
 
 		$filesjson = $filesjson.TrimEnd(',')
+
+		$ispublic = $Public.ToString().ToLower()
 		
 		$body = "{
 			""description"": """ + $Description + """,
-			""public"": true,
+			""public"": $ispublic,
 			""files"": {" + $filesjson + "}
 		}"
 
