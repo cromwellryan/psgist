@@ -74,7 +74,7 @@ function New-Gist {
 		$content = $content -replace "`n", "\n"
 		$content = $content -replace """", "\"""
 		$content = $content -replace "/", "\/"
-		$content = $content -replace "'", "\'"
+		#$content = $content -replace "'", "\'"
 
 		$files.Add($filename, $content)
 	}
