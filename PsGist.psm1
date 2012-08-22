@@ -24,6 +24,9 @@ function New-DiffGist {
 	.Parameter Private
 	When specified, the Gist will be made private.  Default is private.
 
+    .Parameter Launch
+    When specified, the default browser will launch to the created Gist URI
+
 	.Example
 	diffgist -Description "Hello.js greets all visitors"
 	Publishing a private Gist
@@ -37,7 +40,8 @@ function New-DiffGist {
         [string]$Name = "current.diff",
 		[string]$Description = "",
 		[string]$Username = $null,
-		[switch]$Public = $false
+		[switch]$Public = $false,
+        [switch]$Launch = $false
 	)
 	BEGIN {
 		$files = @{}
@@ -130,7 +134,9 @@ function New-DiffGist {
 	
 		write-output $url
         
-        start $url
+        if ($Launch) {
+            start $url
+        }
 	}
 }
 
