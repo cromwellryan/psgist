@@ -4,6 +4,135 @@ function Get-Github-Credential($username) {
 	$host.ui.PromptForCredential("Github Credential", "Please enter your Github user name and password.", $username, "")
 }
 
+function New-DiffGist { 
+<# 
+	.Synopsis
+	Publishes Github Gists of current git diff.
+
+	.Description
+	Publishes files as Owned or Anonymous Github Gists.
+
+    .Parameter Name
+    The name to use for the filename of the Gist (minus .diff)
+
+	.Parameter Description 
+	(optional) The Description of this Gist.
+
+	.Parameter Username
+	The Github username which will own this Gist.
+
+	.Parameter Private
+	When specified, the Gist will be made private.  Default is private.
+
+	.Example
+	diffgist -Description "Hello.js greets all visitors"
+	Publishing a private Gist
+
+	.Example
+	diffgist -Name "Hello" -Description "Hello.js greets all visitors" -Public
+	Publishing a public Gist
+#>
+	Param(
+		[Parameter(Position=0, ValueFromPipeline=$true)]
+        [string]$Name = "current.diff",
+		[string]$Description = "",
+		[string]$Username = $null,
+		[switch]$Public = $false
+	)
+	BEGIN {
+		$files = @{}
+	}
+	PROCESS {
+
+        $content = git diff | Out-String
+
+		$content = $content -replace "\\", "\\\\"
+		$content = $content -replace "`t", "\t"
+		$content = $content -replace "`r", "\r"
+		$content = $content -replace "`n", "\n"
+		$content = $content -replace """", "\"""
+		$content = $content -replace "/", "\/"
+
+		$files.Add($Name, $content)
+	}
+	END {
+
+		$apiurl = "https://api.github.com/gists"
+
+		$request = [Net.WebRequest]::Create($apiurl)
+
+        $credential = $(Get-Github-Credential $Username)
+	
+		if($credential -eq $null) {
+			write-host "Github credentials are required."
+			return
+		}
+
+		$username = $credential.Username
+		$password = $credential.Password
+
+		$bstrpassword= [Runtime.InteropServices.Marshal]::SecureStringToBSTR($password)
+		$insecurepassword = [Runtime.InteropServices.Marshal]::PtrToStringAuto($bstrpassword)
+
+		$basiccredential = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes([String]::Format("{0}:{1}", $username, $insecurepassword)))
+		$request.Headers.Add("Authorization", "Basic " + $basiccredential)
+
+		$request.ContentType = "application/json"
+		$request.Method = "POST"
+
+		$files.GetEnumerator() | % { 
+			$singlefilejson = """" + $_.Name + """: {
+					""content"": """ + $_.Value + """
+			},"
+	
+			$filesjson += $singlefilejson
+		}
+
+		$filesjson = $filesjson.TrimEnd(',')
+
+		$ispublic = $Public.ToString().ToLower()
+		
+		$body = "{
+			""description"": """ + $Description + """,
+			""public"": $ispublic,
+			""files"": {" + $filesjson + "}
+		}"
+
+		$bytes = [text.encoding]::Default.getbytes($body)
+		$request.ContentLength = $bytes.Length
+
+		$stream = [io.stream]$request.GetRequestStream()
+		$stream.Write($bytes,0,$bytes.Length)
+
+		try {
+			$response = $request.GetResponse()
+		}
+		catch  [System.Net.WebException] {
+			$_.Exception.Message | write-error 
+			
+			return
+		}
+		
+		$responseStream = $response.GetResponseStream()
+		$reader = New-Object system.io.streamreader -ArgumentList $responseStream
+		$content = $reader.ReadToEnd()
+		$reader.close()
+
+		if( $response.StatusCode -ne [Net.HttpStatusCode]::Created ) {
+			$content | write-error
+
+			return
+		}
+
+		$result = convertfrom-json $content -Type PSObject
+
+		$url = $result.html_url
+	
+		write-output $url
+        
+        start $url
+	}
+}
 
 function New-Gist { 
 <# 
@@ -91,7 +220,7 @@ function New-Gist {
 			return
 		}
 
-		$username = $credential.Username.Substring(1)
+		$username = $credential.Username
 		$password = $credential.Password
 
 		$bstrpassword= [Runtime.InteropServices.Marshal]::SecureStringToBSTR($password)
@@ -157,5 +286,7 @@ function New-Gist {
 
 new-alias gist New-Gist
 new-alias Create-Gist New-Gist # For those who saw my post when I used create... to be deprecated
+new-alias diffgist New-DiffGist
 
 export-modulemember -alias * -function New-Gist
+export-modulemember -alias * -function New-DiffGist
