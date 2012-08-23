@@ -4,6 +4,10 @@ function Get-Github-Credential($username) {
 	$host.ui.PromptForCredential("Github Credential", "Please enter your Github user name and password.", $username, "")
 }
 
+function Clean-Username($username) {
+  $username.Replace("\", "")
+}
+
 function New-DiffGist { 
 <# 
 	.Synopsis
@@ -72,7 +76,7 @@ function New-DiffGist {
 			return
 		}
 
-		$username = $credential.Username
+		$username = (Clean-Username $credential.Username)
 		$password = $credential.Password
 
 		$bstrpassword= [Runtime.InteropServices.Marshal]::SecureStringToBSTR($password)
@@ -226,7 +230,7 @@ function New-Gist {
 			return
 		}
 
-		$username = $credential.Username
+		$username = (Clean-Username $credential.Username)
 		$password = $credential.Password
 
 		$bstrpassword= [Runtime.InteropServices.Marshal]::SecureStringToBSTR($password)
