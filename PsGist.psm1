@@ -64,6 +64,26 @@ function New-DiffGist {
 		$files.Add($Name, $content)
 	}
 	END {
+        $netAssembly = [Reflection.Assembly]::GetAssembly([System.Net.Configuration.SettingsSection])
+
+        if($netAssembly)
+        {
+            $bindingFlags = [Reflection.BindingFlags] "Static,GetProperty,NonPublic"
+            $settingsType = $netAssembly.GetType("System.Net.Configuration.SettingsSectionInternal")
+
+            $instance = $settingsType.InvokeMember("Section", $bindingFlags, $null, $null, @())
+
+            if($instance)
+            {
+                $bindingFlags = "NonPublic","Instance"
+                $useUnsafeHeaderParsingField = $settingsType.GetField("useUnsafeHeaderParsing", $bindingFlags)
+
+                if($useUnsafeHeaderParsingField)
+                {
+                    $useUnsafeHeaderParsingField.SetValue($instance, $true)
+                }
+            }
+        }
 
 		$apiurl = "https://api.github.com/gists"
 
@@ -84,6 +104,8 @@ function New-DiffGist {
 
 		$basiccredential = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes([String]::Format("{0}:{1}", $username, $insecurepassword)))
 		$request.Headers.Add("Authorization", "Basic " + $basiccredential)
+        
+        $request.UserAgent =  "PsGist"
 
 		$request.ContentType = "application/json"
 		$request.Method = "POST"
@@ -218,6 +240,26 @@ function New-Gist {
 		$files.Add($filename, $content)
 	}
 	END {
+        $netAssembly = [Reflection.Assembly]::GetAssembly([System.Net.Configuration.SettingsSection])
+
+        if($netAssembly)
+        {
+            $bindingFlags = [Reflection.BindingFlags] "Static,GetProperty,NonPublic"
+            $settingsType = $netAssembly.GetType("System.Net.Configuration.SettingsSectionInternal")
+
+            $instance = $settingsType.InvokeMember("Section", $bindingFlags, $null, $null, @())
+
+            if($instance)
+            {
+                $bindingFlags = "NonPublic","Instance"
+                $useUnsafeHeaderParsingField = $settingsType.GetField("useUnsafeHeaderParsing", $bindingFlags)
+
+                if($useUnsafeHeaderParsingField)
+                {
+                    $useUnsafeHeaderParsingField.SetValue($instance, $true)
+                }
+            }
+        }
 
 		$apiurl = "https://api.github.com/gists"
 
@@ -238,6 +280,8 @@ function New-Gist {
 
 		$basiccredential = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes([String]::Format("{0}:{1}", $username, $insecurepassword)))
 		$request.Headers.Add("Authorization", "Basic " + $basiccredential)
+        
+        $request.UserAgent =  "PsGist"
 
 		$request.ContentType = "application/json"
 		$request.Method = "POST"
@@ -261,10 +305,9 @@ function New-Gist {
 		}"
 
 		$bytes = [text.encoding]::Default.getbytes($body)
-		$request.ContentLength = $bytes.Length
 
-		$stream = [io.stream]$request.GetRequestStream()
-		$stream.Write($bytes,0,$bytes.Length)
+		$stream = $request.GetRequestStream()
+        $stream.Write($bytes, 0, $bytes.Length)
 
 		try {
 			$response = $request.GetResponse()
@@ -274,7 +317,10 @@ function New-Gist {
 			
 			return
 		}
+
+        $response
 		
+        <#
 		$responseStream = $response.GetResponseStream()
 		$reader = New-Object system.io.streamreader -ArgumentList $responseStream
 		$content = $reader.ReadToEnd()
@@ -291,6 +337,7 @@ function New-Gist {
 		$url = $result.html_url
 	
 		write-output $url
+        #>
 	}
 }
 
