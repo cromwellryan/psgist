@@ -1,4 +1,9 @@
-. (join-path $PSScriptRoot "/json 1.7.ps1")
+$psInfo = Get-Host
+
+if( $psInfo.Version.Major -eq 2 ) {
+
+    . (join-path $PSScriptRoot "/json 1.7.ps1")
+}
 
 function Get-Github-Credential($username) {
 	$host.ui.PromptForCredential("Github Credential", "Please enter your Github user name and password.", $username, "")
@@ -90,7 +95,7 @@ function New-DiffGist {
 		$request = [Net.WebRequest]::Create($apiurl)
 
         $credential = $(Get-Github-Credential $Username)
-	
+
 		if($credential -eq $null) {
 			write-host "Github credentials are required."
 			return
@@ -105,8 +110,8 @@ function New-DiffGist {
 		$basiccredential = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes([String]::Format("{0}:{1}", $username, $insecurepassword)))
 		$request.Headers.Add("Authorization", "Basic " + $basiccredential)
         
-        $request.UserAgent =  "PsGist"
-
+		$request.UserAgent =  "PsGist"
+		
 		$request.ContentType = "application/json"
 		$request.Method = "POST"
 
@@ -114,14 +119,14 @@ function New-DiffGist {
 			$singlefilejson = """" + $_.Name + """: {
 					""content"": """ + $_.Value + """
 			},"
-	
+
 			$filesjson += $singlefilejson
 		}
 
 		$filesjson = $filesjson.TrimEnd(',')
 
 		$ispublic = $Public.ToString().ToLower()
-		
+
 		$body = "{
 			""description"": """ + $Description + """,
 			""public"": $ispublic,
@@ -139,10 +144,10 @@ function New-DiffGist {
 		}
 		catch  [System.Net.WebException] {
 			$_.Exception.Message | write-error 
-			
+
 			return
 		}
-		
+
 		$responseStream = $response.GetResponseStream()
 		$reader = New-Object system.io.streamreader -ArgumentList $responseStream
 		$content = $reader.ReadToEnd()
@@ -154,10 +159,19 @@ function New-DiffGist {
 			return
 		}
 
-		$result = convertfrom-json $content -Type PSObject
+		$psInfo = Get-Host
+
+        if( $psInfo.Version.Major -eq 2 ) {
+
+            $result = convertfrom-json $content -Type PSObject
+        }
+        else {
+    
+            $result = convertfrom-json $content
+        }
 
 		$url = $result.html_url
-	
+
 		write-output $url
         
         if ($Launch) {
@@ -240,7 +254,7 @@ function New-Gist {
 		$files.Add($filename, $content)
 	}
 	END {
-        $netAssembly = [Reflection.Assembly]::GetAssembly([System.Net.Configuration.SettingsSection])
+		$netAssembly = [Reflection.Assembly]::GetAssembly([System.Net.Configuration.SettingsSection])
 
         if($netAssembly)
         {
@@ -260,13 +274,13 @@ function New-Gist {
                 }
             }
         }
-
+		
 		$apiurl = "https://api.github.com/gists"
 
 		$request = [Net.WebRequest]::Create($apiurl)
 
 		$credential = $(Get-Github-Credential $Username)
-	
+
 		if($credential -eq $null) {
 			write-host "Github credentials are required."
 			return
@@ -280,9 +294,9 @@ function New-Gist {
 
 		$basiccredential = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes([String]::Format("{0}:{1}", $username, $insecurepassword)))
 		$request.Headers.Add("Authorization", "Basic " + $basiccredential)
-        
-        $request.UserAgent =  "PsGist"
-
+		
+		$request.UserAgent =  "PsGist"
+		
 		$request.ContentType = "application/json"
 		$request.Method = "POST"
 
@@ -290,14 +304,14 @@ function New-Gist {
 			$singlefilejson = """" + $_.Name + """: {
 					""content"": """ + $_.Value + """
 			},"
-	
+
 			$filesjson += $singlefilejson
 		}
 
 		$filesjson = $filesjson.TrimEnd(',')
 
 		$ispublic = $Public.ToString().ToLower()
-		
+
 		$body = "{
 			""description"": """ + $Description + """,
 			""public"": $ispublic,
@@ -305,22 +319,20 @@ function New-Gist {
 		}"
 
 		$bytes = [text.encoding]::Default.getbytes($body)
+		$request.ContentLength = $bytes.Length
 
-		$stream = $request.GetRequestStream()
-        $stream.Write($bytes, 0, $bytes.Length)
+		$stream = [io.stream]$request.GetRequestStream()
+		$stream.Write($bytes,0,$bytes.Length)
 
 		try {
 			$response = $request.GetResponse()
 		}
 		catch  [System.Net.WebException] {
 			$_.Exception.Message | write-error 
-			
+
 			return
 		}
 
-        $response
-		
-        <#
 		$responseStream = $response.GetResponseStream()
 		$reader = New-Object system.io.streamreader -ArgumentList $responseStream
 		$content = $reader.ReadToEnd()
@@ -331,13 +343,21 @@ function New-Gist {
 
 			return
 		}
+        
+        $psInfo = Get-Host
 
-		$result = convertfrom-json $content -Type PSObject
+        if( $psInfo.Version.Major -eq 2 ) {
+
+            $result = convertfrom-json $content -Type PSObject
+        }
+        else {
+    
+            $result = convertfrom-json $content
+        }
 
 		$url = $result.html_url
-	
+
 		write-output $url
-        #>
 	}
 }
 
